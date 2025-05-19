@@ -1,7 +1,7 @@
 import configparser
 import logging
-from logging.handlers import TimedRotatingFileHandler
 import os
+from datetime import datetime, timedelta
 import requests
 import sys
 from pysnmp.hlapi import (
@@ -10,22 +10,59 @@ from pysnmp.hlapi import (
 )
 
 
-if getattr(sys, 'frozen', False):
-    log_path = os.path.join(os.path.dirname(sys.executable), "snmp_log.txt")
-else:
-    log_path = os.path.join(os.getcwd(), "snmp_log.txt")
+# === Configuração dinâmica do Logger ===
+config_ini = configparser.ConfigParser()
+config_ini.read('config.ini')
+config_default = config_ini['DEFAULT'] if 'DEFAULT' in config_ini else {}
 
-print("Log path:", log_path)
+# Lê loglevel e log_days do .ini
+loglevel = int(config_default.get('loglevel', 0))
+log_days = int(config_default.get('log_days', 7))
 
+# Define nível do logger
 logger = logging.getLogger("snmp_logger")
-logger.setLevel(logging.INFO)
+if loglevel == 2:
+    logger.setLevel(logging.DEBUG)
+elif loglevel == 1:
+    logger.setLevel(logging.INFO)
+else:
+    logger.setLevel(logging.ERROR)
 
+# Caminho do log diário
+hoje = datetime.now().strftime('%Y-%m-%d')
+if getattr(sys, 'frozen', False):
+    log_dir = os.path.dirname(sys.executable)
+else:
+    log_dir = os.getcwd()
+log_path = os.path.join(log_dir, f"snmp_log_{hoje}.txt")
+
+# --- Limpeza de logs antigos ---
+
+
+def cleanup_old_logs(log_dir, log_days):
+    arquivos = [f for f in os.listdir(log_dir) if f.startswith(
+        'snmp_log_') and f.endswith('.txt')]
+    arquivos.sort()
+    limite = datetime.now() - timedelta(days=log_days)
+    for f in arquivos:
+        try:
+            data_str = f[len('snmp_log_'):-len('.txt')]
+            data_log = datetime.strptime(data_str, '%Y-%m-%d')
+            if data_log < limite:
+                os.remove(os.path.join(log_dir, f))
+        except Exception as e:
+            print(f"Erro ao tentar remover log antigo {f}: {e}")
+
+
+cleanup_old_logs(log_dir, log_days)
+
+# --- Configuração do handler simples ---
 try:
     handler = logging.FileHandler(log_path, encoding='utf-8')
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
     handler.setFormatter(formatter)
     logger.addHandler(handler)
-    print("FileHandler attached to logger.")
+    print(f"FileHandler attached to logger: {log_path}")
 except Exception as e:
     print(f"Erro ao inicializar FileHandler: {e}")
     logger.addHandler(logging.StreamHandler())
