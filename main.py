@@ -10,7 +10,7 @@ from pysnmp.hlapi import (
 )
 
 
-# === Configuração dinâmica do Logger ===
+#  Configuração do Logger 
 config_ini = configparser.ConfigParser()
 config_ini.read('config.ini')
 config_default = config_ini['DEFAULT'] if 'DEFAULT' in config_ini else {}
@@ -28,17 +28,17 @@ elif loglevel == 1:
 else:
     logger.setLevel(logging.ERROR)
 
-# Caminho do log diário
+# Caminho do log diário na subpasta logs
 hoje = datetime.now().strftime('%Y-%m-%d')
 if getattr(sys, 'frozen', False):
-    log_dir = os.path.dirname(sys.executable)
+    base_dir = os.path.dirname(sys.executable)
 else:
-    log_dir = os.getcwd()
+    base_dir = os.getcwd()
+log_dir = os.path.join(base_dir, 'logs')
+os.makedirs(log_dir, exist_ok=True)
 log_path = os.path.join(log_dir, f"snmp_log_{hoje}.txt")
 
-# --- Limpeza de logs antigos ---
-
-
+#  Limpeza de logs antigos  
 def cleanup_old_logs(log_dir, log_days):
     arquivos = [f for f in os.listdir(log_dir) if f.startswith(
         'snmp_log_') and f.endswith('.txt')]
@@ -56,7 +56,7 @@ def cleanup_old_logs(log_dir, log_days):
 
 cleanup_old_logs(log_dir, log_days)
 
-# --- Configuração do handler simples ---
+#  Configuração do handler simples 
 try:
     handler = logging.FileHandler(log_path, encoding='utf-8')
     formatter = logging.Formatter('%(asctime)s - %(levelname)s - %(message)s')
