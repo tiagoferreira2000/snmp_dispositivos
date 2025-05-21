@@ -10,9 +10,6 @@ using System.Linq;
 using System.Text;
 using Serilog.Sinks.File;
 
-// See https://aka.ms/new-console-template for more information
-// Console.WriteLine("Hello, World!");
-
 class Program
 {
     static string logDir = "logs";
